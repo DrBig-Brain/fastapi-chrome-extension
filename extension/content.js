@@ -69,7 +69,7 @@ function createChatWindow() {
     chatWindow.id = 'video-chat-extension';
     chatWindow.innerHTML = `
         <div id="chat-header">
-            <span>🤖 Video Chat</span>
+            <span>🤖 inSPECt</span>
             <div>
                 <button id="minimize-chat">−</button>
                 <button id="close-chat">✖</button>
@@ -280,6 +280,8 @@ function attachEventListeners() {
     document.getElementById('close-chat').onclick = function() {
         chatWindow.remove();
         chatWindow = null;
+        // Update storage state
+        chrome.storage.local.set({ chatWindowOpen: false });
     };
     
     // Send message
@@ -378,23 +380,56 @@ setInterval(() => {
 setTimeout(() => {
     connectWebSocket();
     
-    // Auto-create chat window if video detected
-    if (document.querySelector('video')) {
-        createChatWindow();
-    }
-}, 2000);
-
-// Listen for extension icon click
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'toggle_chat') {
-        if (chatWindow) {
-            chatWindow.remove();
-            chatWindow = null;
-        } else {
-            if (!websocket || websocket.readyState !== WebSocket.OPEN) {
-                connectWebSocket();
-            }
+    // Auto-create chat window if video detected and was previously open
+    chrome.storage.local.get(['chatWindowOpen'], function(result) {
+        if (result.chatWindowOpen && document.querySelector('video')) {
             createChatWindow();
         }
+    });
+}, 2000);
+
+// Listen for extension messages with proper response handling
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'toggle_chat') {
+        try {
+            if (request.forceState !== undefined) {
+                // Force specific state (open/close)
+                if (request.forceState && !chatWindow) {
+                    // Force open
+                    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+                        connectWebSocket();
+                    }
+                    createChatWindow();
+                } else if (!request.forceState && chatWindow) {
+                    // Force close
+                    chatWindow.remove();
+                    chatWindow = null;
+                }
+            } else {
+                // Toggle behavior (original)
+                if (chatWindow) {
+                    chatWindow.remove();
+                    chatWindow = null;
+                } else {
+                    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+                        connectWebSocket();
+                    }
+                    createChatWindow();
+                }
+            }
+            
+            // Save current state
+            chrome.storage.local.set({ chatWindowOpen: !!chatWindow });
+            
+            // Send success response
+            sendResponse({ success: true, isOpen: !!chatWindow });
+            
+        } catch (error) {
+            console.error('Error in toggle_chat:', error);
+            sendResponse({ success: false, error: error.message });
+        }
+        
+        // Return true to indicate we'll send a response asynchronously
+        return true;
     }
 });
