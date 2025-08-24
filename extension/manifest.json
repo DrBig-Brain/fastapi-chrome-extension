@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Video Chat Assistant",
+  "name": "inSPECt - Video Chat Assistant",
   "version": "1.0",
-  "description": "AI chatbot for video content",
+  "description": "AI chatbot for video content using Gemini API",
   
   "permissions": [
     "activeTab",
@@ -22,5 +22,12 @@
   
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/spec_logo.png", "settings.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

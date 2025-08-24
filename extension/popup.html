@@ -108,6 +108,30 @@
             background: #f8d7da;
         }
         
+        .status.warning {
+            color: #664d03;
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        
+        /* Settings Button */
+        .settings-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .settings-btn:hover {
+            background: #5a6268;
+        }
+        
         /* Animation */
         .switch-container:hover {
             transform: translateY(-1px);
@@ -117,7 +141,7 @@
     </style>
 </head>
 <body>
-    <h3>inSPECt</h3>
+    <h3>🤖 inSPECt</h3>
     
     <div class="switch-container">
         <span class="switch-label">Chat Window</span>
@@ -128,6 +152,8 @@
     </div>
     
     <div class="status" id="status">Ready to chat</div>
+    
+    <button class="settings-btn" id="settings-btn">⚙️ API Settings</button>
     
     <script src="popup.js"></script>
 </body>

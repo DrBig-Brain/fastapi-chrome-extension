@@ -1,6 +1,6 @@
 // Background script
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('Video Chat Extension installed');
+    console.log('inSPECt - Video Chat Extension installed');
 });
 
 // Handle extension icon click

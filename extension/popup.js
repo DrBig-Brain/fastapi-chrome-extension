@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     const chatToggle = document.getElementById('chat-toggle');
     const statusDiv = document.getElementById('status');
+    const settingsBtn = document.getElementById('settings-btn');
+    
+    // Check API key on load
+    checkApiKey();
     
     // Load current state from storage
     chrome.storage.local.get(['chatWindowOpen'], function(result) {
@@ -8,9 +12,25 @@ document.addEventListener('DOMContentLoaded', function() {
         updateStatus(chatToggle.checked);
     });
     
+    // Settings button click
+    settingsBtn.addEventListener('click', function() {
+        chrome.tabs.create({
+            url: chrome.runtime.getURL('settings.html')
+        });
+    });
+    
     // Handle switch toggle
     chatToggle.addEventListener('change', async function() {
         const isChecked = this.checked;
+        
+        // Check API key first
+        const hasApiKey = await checkApiKey();
+        if (!hasApiKey && isChecked) {
+            this.checked = false;
+            statusDiv.textContent = '⚠️ Please set up your API key first';
+            statusDiv.className = 'status warning';
+            return;
+        }
         
         try {
             // Get active tab
@@ -46,12 +66,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    function checkApiKey() {
+        return new Promise((resolve) => {
+            chrome.storage.local.get(['geminiApiKey', 'geminiModel'], function(result) {
+                const hasKey = !!(result.geminiApiKey && result.geminiApiKey.trim());
+                const hasModel = !!(result.geminiModel);
+                resolve(hasKey && hasModel);
+            });
+        });
+    }
+    
     function updateStatus(isOpen) {
         if (isOpen) {
-            statusDiv.textContent = 'Chat window is open';
+            statusDiv.textContent = '✅ Chat window is open';
             statusDiv.className = 'status success';
         } else {
-            statusDiv.textContent = 'Chat window is closed';
+            statusDiv.textContent = '⭕ Chat window is closed';
             statusDiv.className = 'status';
         }
     }

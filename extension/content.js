@@ -12,19 +12,36 @@ function connectWebSocket() {
     
     websocket.onopen = function(event) {
         console.log('Connected to backend');
-        sendVideoUpdate();
+        sendApiKey(); // Send API key first
+        setTimeout(sendVideoUpdate, 500); // Then send video update
     };
     
     websocket.onmessage = function(event) {
         const data = JSON.parse(event.data);
         if (data.type === 'chat_response') {
             displayMessage(data.message, 'assistant');
+        } else if (data.type === 'error') {
+            displayMessage('❌ ' + data.message, 'assistant');
         }
     };
     
     websocket.onerror = function(error) {
         console.error('WebSocket error:', error);
     };
+}
+
+// Send API key and model configuration
+function sendApiKey() {
+    chrome.storage.local.get(['geminiApiKey', 'geminiModel'], function(result) {
+        if (result.geminiApiKey && websocket && websocket.readyState === WebSocket.OPEN) {
+            const model = result.geminiModel || 'gemini-2.5-flash'; // Default to 2.5 Flash
+            websocket.send(JSON.stringify({
+                type: 'config',
+                api_key: result.geminiApiKey,
+                model: model
+            }));
+        }
+    });
 }
 
 // Get current video information
@@ -47,6 +64,8 @@ function getPlatform() {
     if (hostname.includes('youtube.com')) return 'YouTube';
     if (hostname.includes('vimeo.com')) return 'Vimeo';
     if (hostname.includes('netflix.com')) return 'Netflix';
+    if (hostname.includes('twitch.tv')) return 'Twitch';
+    if (hostname.includes('dailymotion.com')) return 'Dailymotion';
     return 'Unknown';
 }
 
@@ -67,10 +86,17 @@ function createChatWindow() {
     
     chatWindow = document.createElement('div');
     chatWindow.id = 'video-chat-extension';
+    
+    // Get the extension URL for the logo
+    const logoUrl = chrome.runtime.getURL('icons/spec_logo.png');
+    
     chatWindow.innerHTML = `
         <div id="chat-header">
-            <span>🤖 inSPECt</span>
-            <div>
+            <div id="header-left">
+                <img src="${logoUrl}" id="chat-logo" alt="inSPECt">
+                <span>inSPECt</span>
+            </div>
+            <div id="header-right">
                 <button id="minimize-chat">−</button>
                 <button id="close-chat">✖</button>
             </div>
@@ -121,7 +147,7 @@ function addChatStyles() {
         #chat-header {
             background: #4285f4;
             color: white;
-            padding: 8px 12px;
+            padding: 12px 16px;
             border-radius: 8px 8px 0 0;
             cursor: move;
             display: flex;
@@ -129,16 +155,38 @@ function addChatStyles() {
             align-items: center;
             flex-shrink: 0;
             user-select: none;
+            height: 48px;
+            min-height: 48px;
+        }
+        
+        #header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        
+        #chat-logo {
+            width: 24px;
+            height: 24px;
+            border-radius: 3px;
+            flex-shrink: 0;
+            object-fit: contain;
+            background: rgba(255,255,255,0.1);
+            padding: 2px;
         }
         
         #chat-header span {
             font-weight: bold;
-            font-size: 13px;
+            font-size: 15px;
+            line-height: 1.2;
+            white-space: nowrap;
         }
         
-        #chat-header div {
+        #header-right {
             display: flex;
-            gap: 5px;
+            gap: 6px;
+            flex-shrink: 0;
         }
         
         #minimize-chat, #close-chat {
@@ -146,13 +194,15 @@ function addChatStyles() {
             border: none;
             color: white;
             cursor: pointer;
-            font-size: 14px;
-            width: 20px;
-            height: 20px;
-            border-radius: 2px;
+            font-size: 16px;
+            width: 24px;
+            height: 24px;
+            border-radius: 3px;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+            font-weight: bold;
         }
         
         #minimize-chat:hover, #close-chat:hover {
@@ -245,7 +295,7 @@ function addChatStyles() {
         }
         
         .minimized {
-            height: 40px !important;
+            height: 48px !important;
         }
         
         .minimized #chat-messages,
@@ -376,16 +426,11 @@ setInterval(() => {
     }
 }, 5000);
 
-// Initialize when page loads
+// Initialize when page loads - MANUAL CONTROL ONLY
 setTimeout(() => {
     connectWebSocket();
-    
-    // Auto-create chat window if video detected and was previously open
-    chrome.storage.local.get(['chatWindowOpen'], function(result) {
-        if (result.chatWindowOpen && document.querySelector('video')) {
-            createChatWindow();
-        }
-    });
+    // Chat window will ONLY open when user clicks the extension toggle
+    // No automatic opening based on video detection
 }, 2000);
 
 // Listen for extension messages with proper response handling
