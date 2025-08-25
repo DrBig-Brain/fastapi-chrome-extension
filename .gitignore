@@ -1,3 +1,4 @@
 apikey.txt
 .venv/
 .vscode/
+backend\__pycache__\
